@@ -40,7 +40,7 @@ labelDF = image_DF.join(csv_df, image_DF.id == csv_df.PetID, "left").withColumn(
 labelDF = labelDF.na.drop()
 #labelDF.count()
 
-(trainingDF, validationDF) = labelDF.randomSplit([0.5, 0.5])
+(trainingDF, validationDF) = labelDF.randomSplit([0.64, 0.36])
 trainingDF.show(10)
 
 transformer = ChainedPreprocessing(

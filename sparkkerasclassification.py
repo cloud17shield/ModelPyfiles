@@ -21,10 +21,13 @@ v3_full_model = InceptionV3(weights="imagenet")
 v3_small_model = Model(inputs=v3_full_model.input, outputs=v3_full_model.layers[3].output)
 v3_small_model.save("v3_small_model.h5")
 from pyspark.ml.image import ImageSchema
-image_df = ImageSchema.readImages("hdfs:///project_data/pets/train_images/")
-image_df.printSchema()
-image_df.show(10)
-
+#image_df = ImageSchema.readImages("hdfs:///project_data/pets/train_images/")
+#image_df.printSchema()
+#image_df.show(10)
+from keras.preprocessing.image import img_to_array, load_img
+image = img_to_array(load_img("hdfs:///project_data/pets/train_images/0008c5398-1.jpg", target_size=(299, 299)))
+image = np.expand_dims(image, axis=0)
+print(image)
 import PIL.Image
 import numpy as np
 from keras.applications.imagenet_utils import preprocess_input
