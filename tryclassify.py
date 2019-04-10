@@ -12,6 +12,7 @@ from pyspark import SparkContext, SparkConf
 from pyspark.sql import SparkSession 
 from bigdl.util.common import *
 from pyspark.sql import SQLContext
+from pyspark.ml.classification import DecisionTreeClassificationModel
 
 from bigdl.nn.criterion import CrossEntropyCriterion
 from pyspark.ml import Pipeline
@@ -24,6 +25,10 @@ from zoo.pipeline.api.keras.layers import Dense, Input, Flatten
 from zoo.pipeline.api.keras.models import *
 from zoo.pipeline.api.net import *
 from zoo.pipeline.nnframes import *
+from pyspark.ml import Pipeline
+from pyspark.ml.classification import DecisionTreeClassifier
+from pyspark.ml.feature import StringIndexer, VectorIndexer
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 sc = init_nncontext("HowCute_train")
 sqlCtx = SQLContext(sc)
 df = sqlCtx.read.csv('hdfs:///project_data/pets/train/train.csv',header=True,inferSchema='True')
@@ -42,10 +47,11 @@ feature_vector= feature.transform(df)
 
 feature_vector_test= feature.transform(df_test)
 (trainingData, testData) = feature_vector.randomSplit([0.8, 0.2],seed = 11)
-from pyspark.ml.classification import LogisticRegression
-lr = LogisticRegression(labelCol="AdoptionSpeed_index", featuresCol="features")
+lr = DecisionTreeClassifier(labelCol="AdoptionSpeed_index", featuresCol="features")
 lrModel = lr.fit(trainingData)
-lr_prediction = lrModel.transform(testData)
+lrModel.write().overwrite().save("treemodelofcsv")
+modelloaded = DecisionTreeClassificationModel.load("treemodelofcsv")
+lr_prediction = modelloaded.transform(testData)
 #lr_prediction.select("prediction", "Survived", "features").show()
 #evaluator = MulticlassClassificationEvaluator(labelCol="Survived", predictionCol="prediction", metricName="accuracy")
 evaluator = MulticlassClassificationEvaluator(labelCol="AdoptionSpeed_index", predictionCol="prediction", metricName="accuracy")
@@ -53,9 +59,10 @@ lr_accuracy = evaluator.evaluate(lr_prediction)
 print("Accuracy of LogisticRegression is = %g"% (lr_accuracy))
 print("Test Error of LogisticRegression = %g " % (1.0 - lr_accuracy))
 #lr_prediction.show()
-lr_prediction = lrModel.transform(feature_vector_test)
+lr_prediction = modelloaded.transform(feature_vector_test)
 predictions = [int(elem['prediction']) for elem in lr_prediction.select('prediction').collect()]
 predictions_ids = [elem['PetID'] for elem in lr_prediction.select('PetID').collect()]
 df_new = pd.DataFrame()
 df_new['PetID'] = predictions_ids
 df_new['AdoptionSpeed'] = predictions
+

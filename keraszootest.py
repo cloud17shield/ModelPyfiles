@@ -13,6 +13,7 @@ from zoo.pipeline.api.keras.layers import *
 from zoo.pipeline.api.keras.models import *
 from zoo.pipeline.api.net import *
 from zoo.pipeline.nnframes import *
+import tensorflow as tf
 sc = init_nncontext("keras Example")
 
 # from keras.applications import VGG16
@@ -79,8 +80,7 @@ model.compile(loss='binary_crossentropy',
               optimizer="sgd",
               metrics=['acc'])
 model.summary()
-model.save('zoo_keras_test.h5')
-print("model save success")
+
 
 
 image_path = "hdfs:///project_data/pets/train_images/*"
@@ -94,13 +94,20 @@ labelDF = image_DF.join(csv_df, image_DF.id == csv_df.PetID, "left").withColumn(
 labelDF = labelDF.na.drop()
 #labelDF.count()
 
-(trainingDF, validationDF) = labelDF.randomSplit([0.5, 0.5])
+(trainingDF, validationDF) = labelDF.randomSplit([0.6, 0.4])
 trainingDF.show(10)
 
-transformer = ChainedPreprocessing(
-        [RowToImageFeature(), ImageResize(224, 224), ImageCenterCrop(224, 224),
-         ImageChannelNormalize(123.0, 117.0, 104.0), ImageMatToTensor(), ImageFeatureToTensor()])
-         
+train_rdd = trainingDF.rdd.map()
+dataset = TFDataset.from_rdd(train_rdd,names=["image", "label"],shapes=[[224, 224, 1], [1]],types=[tf.float32, tf.int32],batch_size=56)
+
+optimizer = TFOptimizer.from_keras(keras_model=model, dataset=dataset)
+optimizer.set_train_summary(TrainSummary("hdfs:///lr/tmp/vgg", "vgg"))
+optimizer.optimize(end_trigger=MaxEpoch(5))
+
+# transformer = ChainedPreprocessing(
+#         [RowToImageFeature(), ImageResize(224, 224), ImageCenterCrop(224, 224),
+#          ImageChannelNormalize(123.0, 117.0, 104.0), ImageMatToTensor(), ImageFeatureToTensor()])
+#          
 
 # classifier = NNClassifier(model, CrossEntropyCriterion(), transformer) \
 #     .setLearningRate(0.03) \
@@ -110,11 +117,16 @@ transformer = ChainedPreprocessing(
 #     .setFeaturesCol("image") \
 #     .setCachingSample(False) \
 
-fitmodel = model.fit(transformer(trainingDF), batch_size=14, nb_epoch=10, validation_data=None, distributed=True)
+#fitmodel = model.fit(transformer(trainingDF), batch_size=14, nb_epoch=10, validation_data=None, distributed=True)
 
 # pipeline = Pipeline(stages=[classifier])
 # model = pipeline.fit(trainingDF)
 print("fit over")
+model.save_weights('hdfs:///lr/keraszootestweights.h5')
+print("model weights save success")
+model.save('hdfs:///lr/keraszootest.h5')
+print("model save success")
+
 predictionDF = model.transform(validationDF).cache()
 # caculate the correct rate and the test error
 correct = predictionDF.filter("label=prediction").count()

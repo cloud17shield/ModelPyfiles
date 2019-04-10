@@ -76,7 +76,13 @@ pipeline = Pipeline(stages=[preTrainedNNModel, classifier])
 
 catdogModel = pipeline.fit(trainingDF)
 print("fit over")
-predictionDF = catdogModel.transform(validationDF).cache()
+
+saveModel=lrModel.to_keras()
+saveModel.summary()
+saveModel.save('hdfs:///lr/zootest_lrsave.h5')
+print("model save success")
+
+predictionDF = catdogModel.transform(validationDF)
 predictionDF.sample(False, 0.1).show()
 
 #evaluator = MulticlassClassificationEvaluator(
