@@ -27,60 +27,29 @@ sc = init_nncontext("keras Example")
 # 
 # conv_base.trainable = False
 
+# create model
+model_path="hdfs:///user/example/dogscats/bigdl_inception-v1_imagenet_0.4.0.model"
+full_model = Net.load_bigdl(model_path)
+# create a new model by remove layers after pool5/drop_7x7_s1
+model = full_model.new_graph(["pool5/drop_7x7_s1"])
+# freeze layers from input to pool4/3x3_s2 inclusive
+model.freeze_up_to(["pool4/3x3_s2"])
 
+inputNode = Input(name="input", shape=(3, 224, 224))
+inception = model.to_keras()(inputNode)
+flatten = Flatten()(inception)
+logits = Dense(5)(flatten)
+lrModel = Model(inputNode, logits)
+lrModel.summary()
 
-model = Sequential()
-model.add(ZeroPadding2D((1,1),input_shape=(3,224,224)))
-model.add(Convolution2D(64, 3, 3, activation='relu'))
-model.add(ZeroPadding2D((1,1)))
-model.add(Convolution2D(64, 3, 3, activation='relu'))
-model.add(MaxPooling2D((2,2), strides=(2,2)))
+batchsize = 28
+nEpochs = 10
+lrModel.compile(optimizer=Adam(),
+                  loss='mean_squared_error',
+                  metrics=['accuracy'])
 
-model.add(ZeroPadding2D((1,1)))
-model.add(Convolution2D(128, 3, 3, activation='relu'))
-model.add(ZeroPadding2D((1,1)))
-model.add(Convolution2D(128, 3, 3, activation='relu'))
-model.add(MaxPooling2D((2,2), strides=(2,2)))
-
-model.add(ZeroPadding2D((1,1)))
-model.add(Convolution2D(256, 3, 3, activation='relu'))
-model.add(ZeroPadding2D((1,1)))
-model.add(Convolution2D(256, 3, 3, activation='relu'))
-model.add(ZeroPadding2D((1,1)))
-model.add(Convolution2D(256, 3, 3, activation='relu'))
-model.add(MaxPooling2D((2,2), strides=(2,2)))
-
-model.add(ZeroPadding2D((1,1)))
-model.add(Convolution2D(512, 3, 3, activation='relu'))
-model.add(ZeroPadding2D((1,1)))
-model.add(Convolution2D(512, 3, 3, activation='relu'))
-model.add(ZeroPadding2D((1,1)))
-model.add(Convolution2D(512, 3, 3, activation='relu'))
-model.add(MaxPooling2D((2,2), strides=(2,2)))
-
-model.add(ZeroPadding2D((1,1)))
-model.add(Convolution2D(512, 3, 3, activation='relu'))
-model.add(ZeroPadding2D((1,1)))
-model.add(Convolution2D(512, 3, 3, activation='relu'))
-model.add(ZeroPadding2D((1,1)))
-model.add(Convolution2D(512, 3, 3, activation='relu'))
-model.add(MaxPooling2D((2,2), strides=(2,2)))
-
-model.add(Flatten())
-model.add(Dense(4096, activation='relu'))
-model.add(Dropout(0.5))
-model.add(Dense(4096, activation='relu'))
-model.add(Dropout(0.5))
-model.add(Dense(5, activation='softmax'))
-
-model.get_input_shape() 
-model.get_output_shape() 
-
-model.compile(loss='binary_crossentropy',
-              optimizer="sgd",
-              metrics=['acc'])
+model = lrModel
 model.summary()
-
 
 
 image_path = "hdfs:///project_data/pets/train_images/*"
@@ -97,30 +66,21 @@ labelDF = labelDF.na.drop()
 (trainingDF, validationDF) = labelDF.randomSplit([0.6, 0.4])
 trainingDF.show(10)
 
-train_rdd = trainingDF.rdd.map()
-dataset = TFDataset.from_rdd(train_rdd,names=["image", "label"],shapes=[[224, 224, 1], [1]],types=[tf.float32, tf.int32],batch_size=56)
+train_rdd = trainingDF.rdd.map(tuple)
 
-optimizer = TFOptimizer.from_keras(keras_model=model, dataset=dataset)
-optimizer.set_train_summary(TrainSummary("hdfs:///lr/tmp/vgg", "vgg"))
-optimizer.optimize(end_trigger=MaxEpoch(5))
+transformer = ChainedPreprocessing(
+        [ImageResize(256, 256), ImageCenterCrop(224, 224),
+         ImageChannelNormalize(123.0, 117.0, 104.0), ImageMatToTensor(),
+         ImageSetToSample()])
+#dataset = TFDataset.from_rdd(train_rdd,names=["image", "label"],shapes=[[224, 224, 1], [1]],types=[tf.float32, tf.int32],batch_size=56)
 
-# transformer = ChainedPreprocessing(
-#         [RowToImageFeature(), ImageResize(224, 224), ImageCenterCrop(224, 224),
-#          ImageChannelNormalize(123.0, 117.0, 104.0), ImageMatToTensor(), ImageFeatureToTensor()])
-#          
+#optimizer = TFOptimizer.from_keras(keras_model=model, dataset=dataset)
+#optimizer.set_train_summary(TrainSummary("hdfs:///lr/tmp/vgg", "vgg"))
+#optimizer.optimize(end_trigger=MaxEpoch(5))
+samples = train_rdd.map(lambda tuple: Sample.from_ndarray(tuple[0], tuple[1]))
 
-# classifier = NNClassifier(model, CrossEntropyCriterion(), transformer) \
-#     .setLearningRate(0.03) \
-#     .setOptimMethod(Adam()) \
-#     .setBatchSize(14) \
-#     .setMaxEpoch(10) \
-#     .setFeaturesCol("image") \
-#     .setCachingSample(False) \
+fitmodel = model.fit(samples, batch_size=28, nb_epoch=10, validation_data=None, distributed=True)
 
-#fitmodel = model.fit(transformer(trainingDF), batch_size=14, nb_epoch=10, validation_data=None, distributed=True)
-
-# pipeline = Pipeline(stages=[classifier])
-# model = pipeline.fit(trainingDF)
 print("fit over")
 model.save_weights('hdfs:///lr/keraszootestweights.h5')
 print("model weights save success")

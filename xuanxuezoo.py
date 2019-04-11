@@ -12,7 +12,7 @@ from pyspark.sql.functions import col, udf, substring
 
 sc = init_nncontext("train keras")
 img_path="hdfs:///project_data/pets/train_images"
-image_set = ImageSet.read(img_path,sc, 12)
+image_set = ImageSet.read(img_path,sc, 24)
 #image_set.show()
 transformer = ChainedPreprocessing(
         [ImageResize(256, 256), ImageCenterCrop(224, 224),
@@ -36,9 +36,9 @@ for i in image_DF["id"]:
 print(lst[-10:])
 print("label len:", len(lst))
 labels = np.array(lst)
-label_rdd = sc.parallelize(labels, 12)
-label_rdd = sc.parallelize(label_rdd.take(4800), 12)
-image_rdd = sc.parallelize(image_data.get_image().take(4800), 12)
+label_rdd = sc.parallelize(labels, 24)
+label_rdd = sc.parallelize(label_rdd.take(4800), 24)
+image_rdd = sc.parallelize(image_data.get_image().take(4800), 24)
 print("label rdd count", label_rdd.count())
 print("image_rdd count", image_rdd.count())
 samples = image_rdd.zip(label_rdd).filter(lambda tuple: tuple[1] != 6).map(
