@@ -36,3 +36,10 @@ p_lr_test = PipelineModel(stages=[featurizer_test, lr_test])
 tested_lr_test = p_lr_test.transform(image_DF)
 predict_value = tested_lr_test.select('prediction').head()[0]
 print("predict:", predict_value, "type:", type(predict_value))
+try:
+    producer = KafkaProducer(bootstrap_servers='gpu17:9092')
+    producer.send('fun', image_path + str(predict_value))
+except KafkaTimeoutError as timeout_error:
+    print('kafka time out')
+except KafkaError:
+    print('other kafka exception')
