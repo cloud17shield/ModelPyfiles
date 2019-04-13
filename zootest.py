@@ -21,6 +21,7 @@ from zoo.pipeline.api.keras.layers import Dense, Input, Flatten
 #from zoo.pipeline.api.keras.models import *
 #from zoo.pipeline.api.net import *
 from zoo.pipeline.nnframes import *
+from zoo.models.common.zoo_model import *
 
 
 from pyspark.sql import Row
@@ -79,8 +80,11 @@ print("fit over")
 
 #saveModel=lrModel.to_keras()
 #saveModel.summary()
+
 #saveModel.save('hdfs:///lr/zootest_lrsave.h5')
-#print("model save success")
+catdogModel.summary()
+catdogModel.save_model(self, 'hdfs:///lr/zootest_save.h5', weight_path=None, over_write=True)
+print("model save success")
 
 predictionDF = catdogModel.transform(validationDF)
 predictionDF.sample(False, 0.1).show()
