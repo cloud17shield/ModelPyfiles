@@ -15,14 +15,27 @@ import sys
 from kafka import KafkaProducer, KafkaConsumer, TopicPartition
 from kafka.errors import KafkaError, KafkaTimeoutError
 
+from pyspark.streaming import StreamingContext
+from pyspark.streaming.kafka import KafkaUtils
+
 conf = SparkConf().setAppName("loadmodeltest").setMaster("yarn")
 sc = SparkContext(conf=conf)
+ssc = StreamingContext(sc, 10)
+input_topic = 'input'
+output_topic = 'output'
+brokers = "gpu17:2181,gpu17-x1:2181,gpu17-x2:2181,student49-x1:2181,student49-x2:2181,student50-x1:2181," \
+        "student50-x2:2181,student51-x1:2181,student51-x2:2181"
+
 
 sql_sc = SQLContext(sc)
 #print('param', str(sys.argv[1]))
 #csv_df = sql_sc.read.format("csv").option("header","true").load("hdfs:///project_data/pets/train/train.csv")
+kafkaStream = KafkaUtils.createStream(ssc,'gpu17:2181','test-consumer-group', {input_topic:1})
+
 image_path = str(sys.argv[1])
 image_DF = dl.readImages(image_path)
+lines = kafkaStream.map(lambda x: x[1])
+lines.pprint()
 #image_DF.printSchema()
 #image_DF.show()
 
@@ -46,3 +59,5 @@ except KafkaTimeoutError as timeout_error:
     print('kafka time out')
 except KafkaError:
     print('other kafka exception')
+ssc.start()
+ssc.awaitTermination()
