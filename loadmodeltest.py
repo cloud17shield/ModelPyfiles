@@ -38,7 +38,8 @@ producer = KafkaProducer(bootstrap_servers='gpu17:9092')
 def handler(message):
     records = message.collect()
     for record in records:
-        producer.send(output_topic, str(record))
+        print('record', record, type(record))
+        producer.send(output_topic, b'message received')
 
 
 kafkaStream.foreachRDD(handler)
