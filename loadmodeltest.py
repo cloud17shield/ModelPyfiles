@@ -69,5 +69,5 @@ kafkaStream.foreachRDD(handler)
 #     print('kafka time out')
 # except KafkaError:
 #     print('other kafka exception')
-# ssc.start()
-# ssc.awaitTermination()
+ssc.start()
+ssc.awaitTermination()
