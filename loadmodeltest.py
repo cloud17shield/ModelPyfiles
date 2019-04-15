@@ -57,6 +57,7 @@ def handler(message):
             # tested_lr_test.show()
             predict_value = tested_lr_test.select('prediction').head()[0]
             print('predict', predict_value)
+            print('byte predict', str(predict_value).encode('utf-8'))
             producer.send(output_topic, key=key, value=str(predict_value).encode('utf-8'))
             producer.flush()
             print('predict over')
