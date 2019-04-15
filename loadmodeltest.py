@@ -31,7 +31,7 @@ sc = SparkContext(conf=conf)
 #         "student50-x2:2181,student51-x1:2181,student51-x2:2181"
 #
 #
-# sql_sc = SQLContext(sc)
+sql_sc = SQLContext(sc)
 # #print('param', str(sys.argv[1]))
 # #csv_df = sql_sc.read.format("csv").option("header","true").load("hdfs:///project_data/pets/train/train.csv")
 # kafkaStream = KafkaUtils.createStream(ssc, 'gpu17:2181', 'test-consumer-group', {input_topic:1})
