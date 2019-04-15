@@ -41,9 +41,9 @@ producer = KafkaProducer(bootstrap_servers='gpu17:9092')
 def handler(message):
     records = message.collect()
     for record in records:
-        # print('record', record, type(record))
-        # print('-----------')
-        # print('tuple', record[0], record[1], type(record[0]), type(record[1]))
+        print('record', record, type(record))
+        print('-----------')
+        print('tuple', record[0], record[1], type(record[0]), type(record[1]))
         # producer.send(output_topic, b'message received')
         key = record[0]
         value = record[1]
@@ -56,6 +56,7 @@ def handler(message):
             tested_lr_test = p_lr_test.transform(image_DF)
             predict_value = tested_lr_test.select('prediction').head()[0]
             producer.send(output_topic, key=key, value=str(predict_value).encode('utf-8'))
+            producer.flush()
 
 
 kafkaStream.foreachRDD(handler)
