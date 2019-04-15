@@ -36,7 +36,9 @@ sql_sc = SQLContext(sc)
 #csv_df = sql_sc.read.format("csv").option("header","true").load("hdfs:///project_data/pets/train/train.csv")
 kafkaStream = KafkaUtils.createStream(ssc, 'gpu17:2181', 'test-consumer-group', {input_topic:1})
 producer = KafkaProducer(bootstrap_servers='gpu17:9092')
-
+lr_test = LogisticRegressionModel.load('hdfs:///lr')
+featurizer_test = dl.DeepImageFeaturizer(inputCol="image", outputCol="features", modelName="InceptionV3")
+p_lr_test = PipelineModel(stages=[featurizer_test, lr_test])
 
 def handler(message):
     records = message.collect()
@@ -50,10 +52,9 @@ def handler(message):
         if len(key) > 10:
             image_path = value
             image_DF = dl.readImages(image_path)
-            lr_test = LogisticRegressionModel.load('hdfs:///lr')
-            featurizer_test = dl.DeepImageFeaturizer(inputCol="image", outputCol="features", modelName="InceptionV3")
-            p_lr_test = PipelineModel(stages=[featurizer_test, lr_test])
+            image_DF.show()
             tested_lr_test = p_lr_test.transform(image_DF)
+            tested_lr_test.show()
             predict_value = tested_lr_test.select('prediction').head()[0]
             producer.send(output_topic, key=key, value=str(predict_value).encode('utf-8'))
             producer.flush()
