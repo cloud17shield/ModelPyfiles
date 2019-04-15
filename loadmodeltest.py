@@ -37,8 +37,11 @@ tested_lr_test = p_lr_test.transform(image_DF)
 predict_value = tested_lr_test.select('prediction').head()[0]
 print("predict:", predict_value, "type:", type(predict_value))
 try:
+    print('start to build kafka connection')
     producer = KafkaProducer(bootstrap_servers='gpu17:9092')
-    producer.send('fun', image_path + str(predict_value))
+    print('start to send msg')
+    producer.send('fun', b'cbdsiceichiw')
+    print('msg sended')
 except KafkaTimeoutError as timeout_error:
     print('kafka time out')
 except KafkaError:
