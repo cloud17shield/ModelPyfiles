@@ -18,6 +18,9 @@ from kafka.errors import KafkaError, KafkaTimeoutError
 from pyspark.streaming import StreamingContext
 from pyspark.streaming.kafka import KafkaUtils
 
+from pyspark.ml.classification import LogisticRegressionModel
+from pyspark.ml import Pipeline, PipelineModel
+
 
 conf = SparkConf().setAppName("loadmodeltest").setMaster("yarn")
 sc = SparkContext(conf=conf)
@@ -38,10 +41,21 @@ producer = KafkaProducer(bootstrap_servers='gpu17:9092')
 def handler(message):
     records = message.collect()
     for record in records:
-        print('record', record, type(record))
-        print('-----------')
-        print('tuple', record[0], record[1], type(record[0]), type(record[1]))
-        producer.send(output_topic, b'message received')
+        # print('record', record, type(record))
+        # print('-----------')
+        # print('tuple', record[0], record[1], type(record[0]), type(record[1]))
+        # producer.send(output_topic, b'message received')
+        key = record[0]
+        value = record[1]
+        if len(key) > 10:
+            image_path = value
+            image_DF = dl.readImages(image_path)
+            lr_test = LogisticRegressionModel.load('hdfs:///lr')
+            featurizer_test = dl.DeepImageFeaturizer(inputCol="image", outputCol="features", modelName="InceptionV3")
+            p_lr_test = PipelineModel(stages=[featurizer_test, lr_test])
+            tested_lr_test = p_lr_test.transform(image_DF)
+            predict_value = tested_lr_test.select('prediction').head()[0]
+            producer.send(output_topic, key=key, value=str(predict_value).encode('utf-8'))
 
 
 kafkaStream.foreachRDD(handler)
