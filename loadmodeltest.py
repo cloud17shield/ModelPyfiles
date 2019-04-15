@@ -18,6 +18,7 @@ from kafka.errors import KafkaError, KafkaTimeoutError
 from pyspark.streaming import StreamingContext
 from pyspark.streaming.kafka import KafkaUtils
 
+
 conf = SparkConf().setAppName("loadmodeltest").setMaster("yarn")
 sc = SparkContext(conf=conf)
 ssc = StreamingContext(sc, 10)
@@ -30,34 +31,43 @@ brokers = "gpu17:2181,gpu17-x1:2181,gpu17-x2:2181,student49-x1:2181,student49-x2
 sql_sc = SQLContext(sc)
 #print('param', str(sys.argv[1]))
 #csv_df = sql_sc.read.format("csv").option("header","true").load("hdfs:///project_data/pets/train/train.csv")
-kafkaStream = KafkaUtils.createStream(ssc,'gpu17:2181','test-consumer-group', {input_topic:1})
+kafkaStream = KafkaUtils.createStream(ssc, 'gpu17:2181', 'test-consumer-group', {input_topic:1})
+producer = KafkaProducer(bootstrap_servers='gpu17:9092')
 
-image_path = str(sys.argv[1])
-image_DF = dl.readImages(image_path)
-lines = kafkaStream.map(lambda x: x[1])
-lines.pprint()
-#image_DF.printSchema()
-#image_DF.show()
 
-from pyspark.ml.classification import LogisticRegressionModel
-from pyspark.ml import Pipeline, PipelineModel
+def handler(message):
+    records = message.collect()
+    for record in records:
+        producer.send(output_topic, str(record))
 
-lr_test = LogisticRegressionModel.load('hdfs:///lr')
-featurizer_test = dl.DeepImageFeaturizer(inputCol = "image", outputCol = "features", modelName = "InceptionV3")
 
-p_lr_test = PipelineModel(stages=[featurizer_test, lr_test])
-tested_lr_test = p_lr_test.transform(image_DF)
-predict_value = tested_lr_test.select('prediction').head()[0]
-print("predict:", predict_value, "type:", type(predict_value))
-try:
-    print('start to build kafka connection')
-    producer = KafkaProducer(bootstrap_servers='gpu17:9092')
-    print('start to send msg')
-    producer.send('fun', b'cbdsiceichiw')
-    print('msg sended')
-except KafkaTimeoutError as timeout_error:
-    print('kafka time out')
-except KafkaError:
-    print('other kafka exception')
-ssc.start()
-ssc.awaitTermination()
+kafkaStream.foreachRDD(handler)
+# image_path = str(sys.argv[1])
+# image_DF = dl.readImages(image_path)
+# #lines = kafkaStream.map(lambda x: x[1])
+# #lines.pprint()
+# #image_DF.printSchema()
+# #image_DF.show()
+#
+# from pyspark.ml.classification import LogisticRegressionModel
+# from pyspark.ml import Pipeline, PipelineModel
+#
+# lr_test = LogisticRegressionModel.load('hdfs:///lr')
+# featurizer_test = dl.DeepImageFeaturizer(inputCol = "image", outputCol = "features", modelName = "InceptionV3")
+#
+# p_lr_test = PipelineModel(stages=[featurizer_test, lr_test])
+# tested_lr_test = p_lr_test.transform(image_DF)
+# predict_value = tested_lr_test.select('prediction').head()[0]
+# print("predict:", predict_value, "type:", type(predict_value))
+# try:
+#     print('start to build kafka connection')
+#     producer = KafkaProducer(bootstrap_servers='gpu17:9092')
+#     print('start to send msg')
+#     producer.send('fun', b'cbdsiceichiw')
+#     print('msg sended')
+# except KafkaTimeoutError as timeout_error:
+#     print('kafka time out')
+# except KafkaError:
+#     print('other kafka exception')
+# ssc.start()
+# ssc.awaitTermination()
