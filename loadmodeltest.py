@@ -39,6 +39,8 @@ def handler(message):
     records = message.collect()
     for record in records:
         print('record', record, type(record))
+        print('-----------')
+        print('tuple', record[0], record[1], type(record[0]), type(record[1]))
         producer.send(output_topic, b'message received')
 
 
