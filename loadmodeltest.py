@@ -95,7 +95,7 @@ def handler(message):
             predict_value = str(new_predict.select('prediction').head()[0])
             print('predict value', predict_value.encode('utf-8'))
             producer.send(output_topic, key=str(key).encode('utf-8'), value=predict_value.encode('utf-8'))
-
+            producer.flush()
 
 kafkaStream.foreachRDD(handler)
 # image_path = str(sys.argv[1])
