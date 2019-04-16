@@ -27,7 +27,7 @@ from pyspark.ml.feature import VectorAssembler
 
 conf = SparkConf().setAppName("loadmodeltest").setMaster("yarn")
 sc = SparkContext(conf=conf)
-ssc = StreamingContext(sc, 10)
+ssc = StreamingContext(sc, 3)
 input_topic = 'input'
 output_topic = 'output'
 brokers = "gpu17:2181,gpu17-x1:2181,gpu17-x2:2181,student49-x1:2181,student49-x2:2181,student50-x1:2181," \
@@ -65,7 +65,7 @@ def handler(message):
             image_DF.show()
             tested_lr_test = p_lr_test.transform(image_DF)
             # tested_lr_test.show()
-            predict_value = tested_lr_test.select('prediction').head()[0]
+            predict_value = tested_lr_test.select('prediction').head()[0] - 1
             print('predict', predict_value)
             print('byte predict', str(predict_value).encode('utf-8'))
             print('byte key', str(key).encode('utf-8'))
@@ -77,7 +77,14 @@ def handler(message):
             NewInput = Row('Type', 'Age', 'Breed1', 'Breed2', 'Gender', 'Color1', 'Color2', 'Color3', 'MaturitySize',
                            'FurLength', 'Vaccinated', 'Dewormed', 'Sterilized', 'Health', 'Quantity', 'Fee', 'VideoAmt',
                            'PhotoAmt')
-            new_input = NewInput(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 100, 1, '2')
+            value_lst = str(value).split(',')
+            print('value_lst', value_lst)
+            print('lst_len', len(value_lst))
+            new_input = NewInput(int(value_lst[0]), int(value_lst[1]), int(value_lst[2]), int(value_lst[3]),
+                                 int(value_lst[4]), int(value_lst[5]), int(value_lst[6]), int(value_lst[7]),
+                                 int(value_lst[8]), int(value_lst[9]), int(value_lst[10]), int(value_lst[11]),
+                                 int(value_lst[12]), int(value_lst[13]), int(value_lst[14]), int(value_lst[15]),
+                                 int(value_lst[16]), value_lst[17])
             df_new_input = sql_sc.createDataFrame([new_input])
             df_new_input.show()
             df_new_input = pipeline.fit(df_new_input).transform(df_new_input)
