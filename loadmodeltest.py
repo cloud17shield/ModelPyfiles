@@ -73,6 +73,7 @@ def handler(message):
             producer.flush()
             print('predict over')
         elif len(key) == 10:
+            print('entered csv model part')
             modelloaded = DecisionTreeClassificationModel.load("hdfs:///treemodelofcsv")
             NewInput = Row('Type', 'Age', 'Breed1', 'Breed2', 'Gender', 'Color1', 'Color2', 'Color3', 'MaturitySize',
                            'FurLength', 'Vaccinated', 'Dewormed', 'Sterilized', 'Health', 'Quantity', 'Fee', 'VideoAmt',
