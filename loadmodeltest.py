@@ -1,11 +1,12 @@
 from pyspark.ml.classification import LogisticRegression
-#from zoo.common.nncontext import *
+# from zoo.common.nncontext import *
 from pyspark.ml import Pipeline
 import sparkdl as dl
 from sparkdl import DeepImageFeaturizer
 from pyspark import SparkContext, SparkConf
 from pyspark.sql import SparkSession
 from pyspark.sql import SQLContext
+from pyspark.sql import *
 
 from pyspark.sql.functions import col, udf, substring
 from pyspark.sql.types import DoubleType, StringType
@@ -20,7 +21,9 @@ from pyspark.streaming.kafka import KafkaUtils
 
 from pyspark.ml.classification import LogisticRegressionModel
 from pyspark.ml import Pipeline, PipelineModel
-
+from pyspark.ml.classification import DecisionTreeClassificationModel
+from pyspark.ml.feature import StringIndexer, VectorIndexer
+from pyspark.ml.feature import VectorAssembler
 
 conf = SparkConf().setAppName("loadmodeltest").setMaster("yarn")
 sc = SparkContext(conf=conf)
@@ -28,17 +31,24 @@ ssc = StreamingContext(sc, 10)
 input_topic = 'input'
 output_topic = 'output'
 brokers = "gpu17:2181,gpu17-x1:2181,gpu17-x2:2181,student49-x1:2181,student49-x2:2181,student50-x1:2181," \
-        "student50-x2:2181,student51-x1:2181,student51-x2:2181"
-
+          "student50-x2:2181,student51-x1:2181,student51-x2:2181"
 
 sql_sc = SQLContext(sc)
-#print('param', str(sys.argv[1]))
-#csv_df = sql_sc.read.format("csv").option("header","true").load("hdfs:///project_data/pets/train/train.csv")
-kafkaStream = KafkaUtils.createStream(ssc, 'gpu17:2181', 'test-consumer-group', {input_topic:1})
+df = sql_sc.read.csv('hdfs:///project_data/pets/train/train.csv', header=True, inferSchema='True').drop('Name').drop(
+    'State')
+input_cols = [a for a, b in df.dtypes if b == 'int']
+indexers = [StringIndexer(inputCol=column, outputCol=column + "_index").fit(df) for column in ["AdoptionSpeed"]]
+pipeline = Pipeline(stages=indexers)
+
+# print('param', str(sys.argv[1]))
+# csv_df = sql_sc.read.format("csv").option("header","true").load("hdfs:///project_data/pets/train/train.csv")
+kafkaStream = KafkaUtils.createStream(ssc, 'gpu17:2181', 'test-consumer-group', {input_topic: 1})
 producer = KafkaProducer(bootstrap_servers='gpu17:9092')
 lr_test = LogisticRegressionModel.load('hdfs:///lr')
 featurizer_test = dl.DeepImageFeaturizer(inputCol="image", outputCol="features", modelName="InceptionV3")
 p_lr_test = PipelineModel(stages=[featurizer_test, lr_test])
+feature = VectorAssembler(inputCols=input_cols, outputCol="features")
+
 
 def handler(message):
     records = message.collect()
@@ -62,15 +72,30 @@ def handler(message):
             producer.send(output_topic, key=str(key).encode('utf-8'), value=str(predict_value).encode('utf-8'))
             producer.flush()
             print('predict over')
+        elif len(key) == 10:
+            modelloaded = DecisionTreeClassificationModel.load("hdfs:///treemodelofcsv")
+            NewInput = Row('Type', 'Age', 'Breed1', 'Breed2', 'Gender', 'Color1', 'Color2', 'Color3', 'MaturitySize',
+                           'FurLength', 'Vaccinated', 'Dewormed', 'Sterilized', 'Health', 'Quantity', 'Fee', 'VideoAmt',
+                           'PhotoAmt')
+            new_input = NewInput(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 100, 1, '2')
+            df_new_input = sql_sc.createDataFrame([new_input])
+            df_new_input.show()
+            df_new_input = pipeline.fit(df_new_input).transform(df_new_input)
+            df_new_input = feature.transform(df_new_input)
+            new_predict = modelloaded.transform(df_new_input)
+            new_predict.show()
+            predict_value = str(new_predict.select('prediction').head()[0])
+            print('predict value', predict_value.encode('utf-8'))
+            producer.send(output_topic, key=str(key).encode('utf-8'), value=predict_value.encode('utf-8'))
 
 
 kafkaStream.foreachRDD(handler)
 # image_path = str(sys.argv[1])
 # image_DF = dl.readImages(image_path)
-#lines = kafkaStream.map(lambda x: x[1])
-#lines.pprint()
-#image_DF.printSchema()
-#image_DF.show()
+# lines = kafkaStream.map(lambda x: x[1])
+# lines.pprint()
+# image_DF.printSchema()
+# image_DF.show()
 
 # from pyspark.ml.classification import LogisticRegressionModel
 # from pyspark.ml import Pipeline, PipelineModel
