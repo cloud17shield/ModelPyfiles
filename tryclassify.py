@@ -26,13 +26,15 @@ from pyspark.ml.classification import DecisionTreeClassifier
 from pyspark.ml.feature import StringIndexer, VectorIndexer
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 
-sc = init_nncontext("HowCute_train")
+conf = SparkConf().setAppName("pet_adoption").setMaster("yarn")
+sc = SparkContext(conf=conf)
+# sc = init_nncontext("HowCute_train")
 sqlCtx = SQLContext(sc)
 df = sqlCtx.read.csv('hdfs:///project_data/pets/train/train.csv', header=True, inferSchema='True').drop('Name').drop(
     'State')
 df_test = sqlCtx.read.csv('hdfs:///project_data/pets/train/train.csv', header=True, inferSchema='True').drop(
     'Name').drop('State')
-spark = SparkSession.builder.appName("pet_adoption").getOrCreate()
+# spark = SparkSession.builder.appName("pet_adoption").getOrCreate()
 ##pandas frame is easier to read
 # df_pd.drop('Name', axis=1, inplace=True)
 input_cols = [a for a, b in df.dtypes if b == 'int']
@@ -71,7 +73,7 @@ df_new['AdoptionSpeed'] = predictions
 NewInput = Row('Type', 'Age', 'Breed1', 'Breed2', 'Gender', 'Color1', 'Color2', 'Color3', 'MaturitySize', 'FurLength',
                'Vaccinated', 'Dewormed', 'Sterilized', 'Health', 'Quantity', 'Fee', 'VideoAmt', 'PhotoAmt')
 new_input = NewInput(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 100, 1, '2')
-df_new_input = spark.createDataFrame([new_input])
+df_new_input = sqlCtx.createDataFrame([new_input])
 df_new_input.show()
 df_new_input = pipeline.fit(df_new_input).transform(df_new_input)
 df_new_input = feature.transform(df_new_input)
