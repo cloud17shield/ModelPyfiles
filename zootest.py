@@ -26,7 +26,7 @@ from zoo.models.common.zoo_model import *
 
 from pyspark.sql import Row
 
-sc = init_nncontext("good")
+sc = init_nncontext("goodzoo")
 
 
 model_path = "hdfs:///user/example/dogscats/bigdl_inception-v1_imagenet_0.4.0.model"
@@ -41,7 +41,7 @@ labelDF = image_DF.join(csv_df, image_DF.id == csv_df.PetID, "left").withColumn(
 labelDF = labelDF.na.drop()
 #labelDF.count()
 
-(trainingDF, validationDF) = labelDF.randomSplit([0.64, 0.36])
+(trainingDF, validationDF) = labelDF.randomSplit([0.8, 0.2])
 trainingDF.show(10)
 
 transformer = ChainedPreprocessing(
@@ -82,9 +82,12 @@ print("fit over")
 #saveModel.summary()
 
 #saveModel.save('hdfs:///lr/zootest_lrsave.h5')
-catdogModel.summary()
-catdogModel.save_model(self, 'hdfs:///lr/zootest_save.h5', weight_path=None, over_write=True)
-print("model save success")
+try:
+    catdogModel.summary()
+    catdogModel.save_model(self, 'hdfs:///lr/zootest_save.h5', weight_path=None, over_write=True)
+    print("model save success")
+except Exception:
+    print("fail save model")
 
 predictionDF = catdogModel.transform(validationDF)
 predictionDF.sample(False, 0.1).show()
@@ -98,7 +101,7 @@ correct = predictionDF.filter("label=prediction").count()
 overall = predictionDF.count()
 accuracy = correct * 1.0 / overall
 print("Test Error = %g " % (1.0 - accuracy))
-
+print("Accuracy = %g " % (accuray))
 
 
 

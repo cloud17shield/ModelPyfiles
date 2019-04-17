@@ -28,7 +28,7 @@ from pyspark.ml.feature import VectorAssembler
 conf = SparkConf().setAppName("loadmodeltest").setMaster("yarn")
 sc = SparkContext(conf=conf)
 ssc = StreamingContext(sc, 3)
-input_topic = 'input'
+input_topic = 'input1'
 output_topic = 'output'
 brokers = "gpu17:2181,gpu17-x1:2181,gpu17-x2:2181,student49-x1:2181,student49-x2:2181,student50-x1:2181," \
           "student50-x2:2181,student51-x1:2181,student51-x2:2181"
