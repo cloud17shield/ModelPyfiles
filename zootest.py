@@ -78,13 +78,11 @@ pipeline = Pipeline(stages=[preTrainedNNModel, classifier])
 catdogModel = pipeline.fit(trainingDF)
 print("fit over")
 
-#saveModel=lrModel.to_keras()
-#saveModel.summary()
-
 #saveModel.save('hdfs:///lr/zootest_lrsave.h5')
 try:
-    catdogModel.summary()
-    catdogModel.save_model(self, 'hdfs:///lr/zootest_save.h5', weight_path=None, over_write=True)
+    #catdogModel.summary()
+    #catdogModel.save_model(self, 'hdfs:///lr/zootest_save.h5', weight_path=None, over_write=True)
+    catdogModel.stages[1].write().overwrite().save('hdfs:///lr/zoo')
     print("model save success")
 except Exception:
     print("fail save model")
