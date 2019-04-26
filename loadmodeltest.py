@@ -42,7 +42,7 @@ pipeline = Pipeline(stages=indexers)
 
 # print('param', str(sys.argv[1]))
 # csv_df = sql_sc.read.format("csv").option("header","true").load("hdfs:///project_data/pets/train/train.csv")
-kafkaStream = KafkaUtils.createStream(ssc, 'gpu17:2181', 'test-consumer-group', {input_topic: 1})
+kafkaStream = KafkaUtils.createStream(ssc, 'gpu17:2181', 'test-consumer-group', {input_topic: 2})
 producer = KafkaProducer(bootstrap_servers='gpu17:9092')
 lr_test = LogisticRegressionModel.load('hdfs:///lr')
 featurizer_test = dl.DeepImageFeaturizer(inputCol="image", outputCol="features", modelName="InceptionV3")

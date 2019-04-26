@@ -26,7 +26,7 @@ image_DF.printSchema()
 image_DF.show(10)
 labelDF = image_DF.join(csv_df, image_DF.id == csv_df.PetID, "left").withColumn("label",col("AdoptionSpeed").cast("double")+1).select("image","label")
 #labelDF.count()
-labelDF = labelDF.na.drop().limit(20000)
+labelDF = labelDF.na.drop().limit(3000)
 #labelDF.count()
 
 (trainingDF, validationDF) = labelDF.randomSplit([0.7, 0.3])
