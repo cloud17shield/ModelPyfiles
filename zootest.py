@@ -41,7 +41,7 @@ labelDF = image_DF.join(csv_df, image_DF.id == csv_df.PetID, "left").withColumn(
 labelDF = labelDF.na.drop()
 #labelDF.count()
 
-(trainingDF, validationDF) = labelDF.randomSplit([0.8, 0.2])
+(trainingDF, validationDF) = labelDF.randomSplit([0.64, 0.36])
 trainingDF.show(10)
 
 transformer = ChainedPreprocessing(
@@ -80,14 +80,13 @@ print("fit over")
 
 #saveModel.save('hdfs:///lr/zootest_lrsave.h5')
 try:
-    #catdogModel.summary()
-    #catdogModel.save_model(self, 'hdfs:///lr/zootest_save.h5', weight_path=None, over_write=True)
+    print("try")
     catdogModel.stages[1].write().overwrite().save('hdfs:///lr/zoo')
     print("model save success")
 except Exception:
-    print("fail save model")
+    print("............")
 
-predictionDF = catdogModel.transform(validationDF)
+predictionDF = catdogModel.transform(validationDF).cache()
 predictionDF.sample(False, 0.1).show()
 
 #evaluator = MulticlassClassificationEvaluator(
@@ -95,11 +94,11 @@ predictionDF.sample(False, 0.1).show()
 #accuracy = evaluator.evaluate(predictionDF)
 # expected error should be less than 10%
 #print("Test Error = %g " % (1.0 - accuracy))
-correct = predictionDF.filter("label=prediction").count()
-overall = predictionDF.count()
-accuracy = correct * 1.0 / overall
-print("Test Error = %g " % (1.0 - accuracy))
-print("Accuracy = %g " % (accuray))
+#correct = predictionDF.filter("label=prediction").count()
+#overall = predictionDF.count()
+#accuracy = correct * 1.0 / overall
+#print("Test Error = %g " % (1.0 - accuracy))
+#print("Accuracy = %g " % (accuray))
 
 
 
